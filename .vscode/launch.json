@@ -1,0 +1,39 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python Debugger: Current File",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
+        },
+        {
+            "name": "Python Extension",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceRoot}/.venv/Scripts/python.exe",
+            "cwd": "${workspaceRoot}",
+            "args": [
+                "${workspaceFolder}/test.py",
+            ],
+            "environment": [
+                {
+                    "name": "PYTHONPATH",
+                    "value": "${workspaceFolder}/build/lib.win-amd64-cpython-313"
+                }
+            ],
+            "externalConsole": false,
+            "stopAtEntry": true,
+            "sourceFileMap": {
+                "D:\\Projects\\loveyoupeng\\pyextension\\build\\temp.win-amd64-cpython-313": "${workspaceFolder}"
+            }
+        }
+    ]
+}
