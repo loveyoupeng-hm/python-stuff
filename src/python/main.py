@@ -2,6 +2,8 @@ import ast
 import inspect
 import textwrap
 from typing import Any, Callable
+import sys
+print(sys.path)
 import spam
 
 cache: dict[ast.FunctionDef, ast.FunctionDef] = {}

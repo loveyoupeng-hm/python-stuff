@@ -11,29 +11,30 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "env": {
-                "PYTHONPATH": "${workspaceFolder}"
-            }
+                "PYTHONPATH": "${workspaceFolder};${workspaceFolder}/build;C:\\Users\\Yunpeng\\AppData\\Local\\Programs\\Python\\Python313\\Lib",
+                "PYTHONHOME": "${workspaceFolder};${workspaceFolder}/build;C:\\Users\\Yunpeng\\AppData\\Local\\Programs\\Python\\Python313\\Lib",
+            },
         },
         {
-            "name": "Python Extension",
+            "name": "extension python",
             "type": "cppvsdbg",
             "request": "launch",
-            "program": "${workspaceRoot}/.venv/Scripts/python.exe",
-            "cwd": "${workspaceRoot}",
+            "program": "${workspaceFolder}/../../opensource/cpython/PCBuild/amd64/python_d.exe",
             "args": [
-                "${workspaceFolder}/test.py",
+                "${workspaceFolder}/src/python/main.py"
             ],
+            "console": "integratedTerminal",
             "environment": [
                 {
                     "name": "PYTHONPATH",
-                    "value": "${workspaceFolder}/build/lib.win-amd64-cpython-313"
+                    "value": "${workspaceFolder}/build;C:\\Users\\Yunpeng\\AppData\\Local\\Programs\\Python\\Python313\\Lib"
+                },
+                {
+                    "name": "PYTHONHOME",
+                    "value": "${workspaceFolder}/build;C:\\Users\\Yunpeng\\AppData\\Local\\Programs\\Python\\Python313\\Lib"
                 }
             ],
-            "externalConsole": false,
-            "stopAtEntry": true,
-            "sourceFileMap": {
-                "D:\\Projects\\loveyoupeng\\pyextension\\build\\temp.win-amd64-cpython-313": "${workspaceFolder}"
-            }
+            "stopAtEntry": false,
         }
     ]
 }
