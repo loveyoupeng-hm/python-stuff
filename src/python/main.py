@@ -2,9 +2,8 @@ import ast
 import inspect
 import textwrap
 from typing import Any, Callable
-import sys
-print(sys.path)
 import spam
+
 
 cache: dict[ast.FunctionDef, ast.FunctionDef] = {}
 context: dict[str, Any] = {}
@@ -17,7 +16,7 @@ def replace(dist: Callable[[int, int], int]):
         dist_source = textwrap.dedent(inspect.getsource(dist))
         src_ast = ast.parse(src_source)
         dist_ast = ast.parse(dist_source)
-        cache[src_ast.body[-1]] = dist_ast.body[0]
+        cache[src_ast.body[-1]] = dist_ast.body[0]  # type:ignore[assignment, index]
         global context
         context[dist.__name__] = dist
         return src
@@ -28,7 +27,9 @@ def replace(dist: Callable[[int, int], int]):
 def process(func: Callable[[int, int], int]) -> Callable[[int, int], int]:
     """process"""
     source = textwrap.dedent(inspect.getsource(func))
-    prefix = "\n".join(["# nothing " for _ in range(func.__code__.co_firstlineno)]) + "\n"
+    prefix = (
+        "\n".join(["# nothing " for _ in range(func.__code__.co_firstlineno)]) + "\n"
+    )
     source = "\n".join(
         [line for line in source.split("\n") if not line.strip().startswith("@process")]
     )

@@ -22,7 +22,7 @@ import subprocess
 class CmakeBuildExt(build_ext):
     def run(self):
         subprocess.check_call(
-            ["cmake", "-G", "Ninja", "-DCMAKE_BUILD_TYPE=Debug", "-B", "build"]
+            ["cmake", "-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release", "-B", "build"]
         )
         subprocess.check_call(["ninja", "-C", "build"])
 
