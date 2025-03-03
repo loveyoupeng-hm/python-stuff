@@ -3,6 +3,7 @@ import inspect
 import textwrap
 from typing import Any, Callable
 import spam
+import custom
 
 
 cache: dict[ast.FunctionDef, ast.FunctionDef] = {}
@@ -79,3 +80,5 @@ print(spam.system())
 
 print(mul(0, 3))
 print(mul(4, 4))
+
+print(custom.Custom())
