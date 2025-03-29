@@ -5,10 +5,10 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python current file",
+            "name": "Python main file",
             "type": "debugpy",
             "request": "launch",
-            "program": "${file}",
+            "program": "${workspaceFolder}/src/python/main.py",
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}",
             // "python": "${workspaceFolder}/../../opensource/cpython/PCBuild/amd64/python_d.exe",

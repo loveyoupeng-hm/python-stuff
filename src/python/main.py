@@ -4,6 +4,7 @@ import textwrap
 from typing import Any, Callable
 import spam  # type: ignore
 import custom  # type: ignore
+from message_queue import MessageQueue
 
 
 cache: dict[ast.FunctionDef, ast.FunctionDef] = {}
@@ -81,4 +82,12 @@ print(spam.system())
 print(mul(0, 3))
 print(mul(4, 4))
 
-print(custom.Custom("abc", "bcd", 10).name())
+print(custom.Custom("abc", "bcd", 10))
+
+
+def do_nothing(_: int) -> None:
+    pass
+
+
+queue = MessageQueue(do_nothing, 10)
+queue.start()
