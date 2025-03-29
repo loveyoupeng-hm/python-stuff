@@ -2,8 +2,8 @@ import ast
 import inspect
 import textwrap
 from typing import Any, Callable
-import spam
-import custom
+import spam  # type: ignore
+import custom  # type: ignore
 
 
 cache: dict[ast.FunctionDef, ast.FunctionDef] = {}
@@ -81,4 +81,4 @@ print(spam.system())
 print(mul(0, 3))
 print(mul(4, 4))
 
-print(custom.Custom())
+print(custom.Custom("abc", "bcd", 10).name())

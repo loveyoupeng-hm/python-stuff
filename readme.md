@@ -5,6 +5,8 @@ python setup.py build_ext
 
 
 stubgen
-```python
-stubgen --pakcage spam -m ./build/spam.pyd
+```bash
+set MYPYPATH=./build
+stubgen --package spam -m spam -o build
+stubgen --package custom -m custom -o build
 ```

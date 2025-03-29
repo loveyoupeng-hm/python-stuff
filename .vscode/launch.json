@@ -10,7 +10,12 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "cwd": "${workspaceFolder}"
+            "cwd": "${workspaceFolder}",
+            // "python": "${workspaceFolder}/../../opensource/cpython/PCBuild/amd64/python_d.exe",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/build"
+                
+            }
         },
         {
             "name": "extension python",
