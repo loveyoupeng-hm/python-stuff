@@ -5,4 +5,8 @@
     ],
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
+    "cmake.ctestArgs": [
+        "--test-dir",
+        "tests/c"
+    ]
 }
