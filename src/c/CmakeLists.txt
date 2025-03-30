@@ -9,8 +9,11 @@ function(add_module name)
   else()
     set_target_properties(${name} PROPERTIES SUFFIX ".so")
   endif()
-endfunction(add_module name path)
+endfunction()
 
 add_module(spam)
 add_module(custom)
 add_module(message_queue)
+
+add_library(one2onequeue STATIC one2onequeue.c)
+target_compile_definitions(one2onequeue PRIVATE _ATOMIC_OPERATORS_DEFINED)

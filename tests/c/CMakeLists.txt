@@ -4,19 +4,22 @@ project(PythonStuffTests)
 
 enable_testing()
 
-add_executable(${PROJECT_NAME} test.cpp)
+add_executable(test_one2onequeue test_one2onequeue.cpp)
 
 target_include_directories(
-    ${PROJECT_NAME}
+    test_one2onequeue
     PRIVATE
         ${GOOGLE_TEST_SOURCE_DIR}/googletest/include
 )
+target_compile_options(test_one2onequeue PRIVATE -std=c++17)
+
 
 target_link_libraries(
-    ${PROJECT_NAME}
+    test_one2onequeue
     PRIVATE
         GTest::gtest_main
+        one2onequeue
 )
 
 include(GoogleTest)
-gtest_discover_tests(${PROJECT_NAME})
+gtest_discover_tests(test_one2onequeue)
