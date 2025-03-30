@@ -96,7 +96,9 @@ static int MessageQueue_consumer(void *self)
             do
             {
                 if (target->status != Running)
+                {
                     return 0;
+                }
                 target->cached_head = target->head;
             } while (next >= target->cached_head);
         }
@@ -123,12 +125,13 @@ static int MessageQueue_generate(void *self)
             do
             {
                 if (target->status != Running)
+                {
                     return 0;
+                }
                 target->cached_tail = target->tail;
             } while (next - target->cached_tail >= target->size - 1);
         }
         target->queue[next % target->size] = value;
-        printf("in c generated value %d\n", target->queue[next % target->size]);
         value++;
         target->head = next;
     }

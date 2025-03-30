@@ -19,5 +19,5 @@ def test_message_queue():
     while result.qsize() < 5:
         sleep(1)
         pass
-
+    del queue
     assert 1 == 1
