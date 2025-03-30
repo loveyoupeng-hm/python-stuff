@@ -9,6 +9,10 @@
         "--test-dir",
         "tests/c"
     ],
+    "cmake.buildArgs": [
+        "--config",
+        "Release"
+    ],
     "python.analysis.extraPaths": [
         "build"
     ],
