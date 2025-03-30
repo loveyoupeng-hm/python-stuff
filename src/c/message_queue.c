@@ -111,7 +111,7 @@ static int MessageQueue_consumer(void *self)
     }
 
     return 0;
-}
+};
 
 static int MessageQueue_generate(void *self)
 {
@@ -142,7 +142,6 @@ static int MessageQueue_generate(void *self)
 static PyObject *
 MessageQueue_start(MessageQueue *self, PyObject *Py_UNUSED(ignore))
 {
-    printf("run in start\n");
     self->status = Running;
     thrd_create(&self->consumer_thread, MessageQueue_consumer, self);
     thrd_create(&self->producer_thread, MessageQueue_generate, self);
@@ -150,9 +149,24 @@ MessageQueue_start(MessageQueue *self, PyObject *Py_UNUSED(ignore))
     return Py_None;
 };
 
+static PyObject *MessageQueue_enter(MessageQueue *self)
+{
+    Py_INCREF(self);
+    MessageQueue_start(self, NULL);
+    return (PyObject *)self;
+};
+
+static PyObject *MessageQueue_exit(MessageQueue *self, PyObject *args)
+{
+    self->status = Stopped;
+    Py_RETURN_FALSE;
+};
+
 static PyMethodDef MessageQueue_methods[] = {
     {"start", (PyCFunction)MessageQueue_start, METH_NOARGS,
      "Start Processing"},
+    {"__enter__", (PyCFunction)MessageQueue_enter, METH_NOARGS, "enter scope"},
+    {"__exit__", (PyCFunction)MessageQueue_enter, METH_VARARGS, "enter scope"},
     {NULL} /* Sentinel */
 };
 
