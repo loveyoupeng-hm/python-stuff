@@ -1,6 +1,7 @@
-#include "one2onequeue.h"
+#include <stdlib.h>
 #include <threads.h>
 #include <stdatomic.h>
+#include "one2onequeue.h"
 
 One2OneQueue *one2onequeue_new(int capacity, int size)
 {
