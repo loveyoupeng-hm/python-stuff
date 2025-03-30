@@ -11,6 +11,7 @@ def test_message_queue():
 
     def process(value: int) -> None:
         print(f"in python received value {value}")
+        sleep(0.01)
         result.put(value)
 
     queue = MessageQueue(callback=process, size=8)

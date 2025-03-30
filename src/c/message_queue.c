@@ -3,16 +3,26 @@
 #include <stdio.h>
 #include <threads.h>
 
+enum Status
+{
+    New = 0,
+    Running,
+    Stopped
+};
+
 typedef struct
 {
-    PyObject_HEAD int size;
+    PyObject_HEAD;
+    int size;
     PyObject *callback; /* last name */
-    atomic_long head;
+    volatile atomic_long head;
+    volatile atomic_int status;
     int *queue;
     long cached_head;
-    atomic_long tail;
+    volatile atomic_long tail;
     long cached_tail;
-    thrd_t thread;
+    thrd_t consumer_thread;
+    thrd_t producer_thread;
 } MessageQueue;
 
 static void
@@ -21,6 +31,10 @@ MessageQueue_dealloc(MessageQueue *self)
     Py_XDECREF(self->callback);
     Py_XDECREF(self->queue);
     Py_TYPE(self)->tp_free((PyObject *)self);
+    self->status = Stopped;
+    int result;
+    thrd_join(self->producer_thread, &result);
+    thrd_detach(self->consumer_thread);
     if (self->queue)
         free(self->queue);
 }
@@ -38,6 +52,7 @@ MessageQueue_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
         self->tail = 0;
         self->queue = NULL;
         self->callback = NULL;
+        self->status = New;
     }
     return (PyObject *)self;
 }
@@ -67,21 +82,55 @@ static PyMemberDef MessageQueue_members[] = {
     {NULL} /* Sentinel */
 };
 
-static int MessageQueue_run(void *self)
+static int MessageQueue_consumer(void *self)
 {
 
     MessageQueue *target = (MessageQueue *)self;
     PyObject *arglist;
 
-    for (int i = 0; i < 10; ++i)
+    while (target->status == Running)
     {
-        printf("in c publish value %d\n", i);
-        arglist = Py_BuildValue("i", i);
+        long next = target->tail + 1;
+        if (next >= target->cached_head)
+        {
+            do
+            {
+                if (target->status != Running)
+                    return 0;
+                target->cached_head = target->head;
+            } while (next >= target->cached_head);
+        }
+        arglist = Py_BuildValue("i", target->queue[next % target->size]);
+        target->tail = next;
         PyGILState_STATE gstate;
         gstate = PyGILState_Ensure();
         PyObject_CallOneArg(target->callback, arglist);
-        /* Release the thread. No Python API allowed beyond this point. */
         PyGILState_Release(gstate);
+    }
+
+    return 0;
+}
+
+static int MessageQueue_generate(void *self)
+{
+    MessageQueue *target = (MessageQueue *)self;
+    int value = 0;
+    while (target->status == Running)
+    {
+        long next = target->head + 1;
+        if (next - target->cached_tail >= target->size - 1)
+        {
+            do
+            {
+                if (target->status != Running)
+                    return 0;
+                target->cached_tail = target->tail;
+            } while (next - target->cached_tail >= target->size - 1);
+        }
+        target->queue[next % target->size] = value;
+        printf("in c generated value %d\n", target->queue[next % target->size]);
+        value++;
+        target->head = next;
     }
 
     return 0;
@@ -91,7 +140,9 @@ static PyObject *
 MessageQueue_start(MessageQueue *self, PyObject *Py_UNUSED(ignore))
 {
     printf("run in start\n");
-    thrd_create(&self->thread, MessageQueue_run, self);
+    self->status = Running;
+    thrd_create(&self->consumer_thread, MessageQueue_consumer, self);
+    thrd_create(&self->producer_thread, MessageQueue_generate, self);
     Py_INCREF(Py_None);
     return Py_None;
 };
