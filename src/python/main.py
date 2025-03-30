@@ -4,7 +4,7 @@ import textwrap
 from typing import Any, Callable
 import spam  # type: ignore
 import custom  # type: ignore
-from message_queue import MessageQueue
+from message_queue import MessageQueue  # type: ignore
 
 
 cache: dict[ast.FunctionDef, ast.FunctionDef] = {}

@@ -8,5 +8,12 @@
     "cmake.ctestArgs": [
         "--test-dir",
         "tests/c"
-    ]
+    ],
+    "python.analysis.extraPaths": [
+        "build"
+    ],
+    "python.analysis.diagnosticSeverityOverrides": {
+        "reportMissingImports": "none",
+        "reportMissingModuleSource": "none"
+    }
 }
