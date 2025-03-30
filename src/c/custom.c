@@ -1,4 +1,5 @@
 #include <Python.h>
+#include <stddef.h>
 
 typedef struct
 {
@@ -20,22 +21,28 @@ Custom_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
     CustomObject *self;
     self = (CustomObject *)type->tp_alloc(type, 0);
+
     if (self != NULL)
     {
         self->first = PyUnicode_FromString("");
+
         if (self->first == NULL)
         {
             Py_DECREF(self);
+
             return NULL;
         }
         self->last = PyUnicode_FromString("");
+
         if (self->last == NULL)
         {
             Py_DECREF(self);
+
             return NULL;
         }
         self->number = 0;
     }
+
     return (PyObject *)self;
 }
 
@@ -48,16 +55,19 @@ Custom_init(CustomObject *self, PyObject *args, PyObject *kwds)
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "|OOi", kwlist,
                                      &first, &last,
                                      &self->number))
+
         return -1;
 
     if (first)
     {
         Py_XSETREF(self->first, Py_NewRef(first));
     }
+
     if (last)
     {
         Py_XSETREF(self->last, Py_NewRef(last));
     }
+
     return 0;
 }
 
@@ -77,13 +87,17 @@ Custom_name(CustomObject *self, PyObject *Py_UNUSED(ignored))
     if (self->first == NULL)
     {
         PyErr_SetString(PyExc_AttributeError, "first");
+
         return NULL;
     }
+
     if (self->last == NULL)
     {
         PyErr_SetString(PyExc_AttributeError, "last");
+
         return NULL;
     }
+
     return PyUnicode_FromFormat("%S %S", self->first, self->last);
 }
 
@@ -133,16 +147,19 @@ PyMODINIT_FUNC
 PyInit_custom(void)
 {
     PyObject *m;
+
     if (PyType_Ready(&CustomType) < 0)
         return NULL;
 
     m = PyModule_Create(&custommodule);
+
     if (m == NULL)
         return NULL;
 
     if (PyModule_AddObjectRef(m, "Custom", (PyObject *)&CustomType) < 0)
     {
         Py_DECREF(m);
+
         return NULL;
     }
 

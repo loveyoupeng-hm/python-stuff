@@ -4,6 +4,7 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "../../")
 function(add_module name)
   add_library(${name} MODULE ${name}.c)
   target_link_libraries(${name} PRIVATE Python3::Python)
+
   if(WIN32)
     set_target_properties(${name} PROPERTIES SUFFIX ".pyd")
   else()

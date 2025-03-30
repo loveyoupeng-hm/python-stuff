@@ -12,9 +12,6 @@ class CmakeBuildExt(build_ext):
                 "-G",
                 "Ninja",
                 "-DCMAKE_BUILD_TYPE=Release",
-                "-DCMAKE_C_COMPILER=clang-cl",
-                "-DCMAKE_CXX_COMPILER=clang-cl",
-                "-DCMAKE_LINKER=lld-link",
                 "-B",
                 "build",
             ]

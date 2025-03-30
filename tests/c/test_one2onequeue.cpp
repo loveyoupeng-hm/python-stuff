@@ -1,8 +1,6 @@
 #include <gtest/gtest.h>
-extern "C"
-{
 #include "one2onequeue.h"
-}
+#include <atomic>
 
 namespace test_message_queue
 {

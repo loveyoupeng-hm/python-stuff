@@ -1,15 +1,22 @@
 cmake_minimum_required(VERSION 3.31)
 
+
 project(pyextension)
+set(CMAKE_STATIC_LIBRARY_PREFIX "")
+set(CMAKE_SHARED_LIBRARY_PREFIX "")
+set(CMAKE_STATIC_MODULE_PREFIX "")
+set(CMAKE_SHARED_MODULE_PREFIX "")
 
 
 set(LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libs)
 set(CPM_SOURCE_CACHE ${LIB_DIR}/cpm)
+set(CMAKE_C_COMPILER_VERSION 13)
 
 include(cmake/cpm.cmake)
 
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
+
 if(NOT CMAKE_DEBUG_POSTFIX)
   set(CMAKE_DEBUG_POSTFIX "_d")
 endif()

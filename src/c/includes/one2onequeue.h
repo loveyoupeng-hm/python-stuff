@@ -1,10 +1,10 @@
 #include <stdatomic.h>
-#ifdef atomic_signal_fence
-    #undef atomic_signal_fence 
-#endif
 #include <stdio.h>
 #include <threads.h>
-#include <corecrt_malloc.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct One2OneQueue_t
 {
@@ -20,3 +20,7 @@ typedef struct One2OneQueue_t
 } One2OneQueue;
 
 One2OneQueue *one2onequeue_new(int capacity, int size);
+
+#ifdef __cplusplus
+}
+#endif

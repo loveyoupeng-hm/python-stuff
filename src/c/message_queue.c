@@ -1,5 +1,6 @@
 #include <Python.h>
 #include <stdatomic.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <threads.h>
 
@@ -35,6 +36,7 @@ MessageQueue_dealloc(MessageQueue *self)
     int result;
     thrd_join(self->producer_thread, &result);
     thrd_detach(self->consumer_thread);
+
     if (self->queue)
         free(self->queue);
 }
@@ -44,6 +46,7 @@ MessageQueue_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
     MessageQueue *self;
     self = (MessageQueue *)type->tp_alloc(type, 0);
+
     if (self != NULL)
     {
         self->cached_head = 0;
@@ -54,6 +57,7 @@ MessageQueue_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
         self->callback = NULL;
         self->status = New;
     }
+
     return (PyObject *)self;
 }
 
@@ -66,6 +70,7 @@ MessageQueue_init(MessageQueue *self, PyObject *args, PyObject *kwds)
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "|Oi", kwlist,
                                      &callback,
                                      &self->size))
+
         return -1;
 
     if (callback)
@@ -73,6 +78,7 @@ MessageQueue_init(MessageQueue *self, PyObject *args, PyObject *kwds)
         Py_XSETREF(self->callback, Py_NewRef(callback));
     }
     self->queue = (int *)malloc(sizeof(int) * self->size);
+
     return 0;
 }
 
@@ -91,6 +97,7 @@ static int MessageQueue_consumer(void *self)
     while (target->status == Running)
     {
         long next = target->tail + 1;
+
         if (next >= target->cached_head)
         {
             do
@@ -117,9 +124,11 @@ static int MessageQueue_generate(void *self)
 {
     MessageQueue *target = (MessageQueue *)self;
     int value = 0;
+
     while (target->status == Running)
     {
         long next = target->head + 1;
+
         if (next - target->cached_tail >= target->size - 1)
         {
             do
@@ -146,6 +155,7 @@ MessageQueue_start(MessageQueue *self, PyObject *Py_UNUSED(ignore))
     thrd_create(&self->consumer_thread, MessageQueue_consumer, self);
     thrd_create(&self->producer_thread, MessageQueue_generate, self);
     Py_INCREF(Py_None);
+
     return Py_None;
 };
 
@@ -153,6 +163,7 @@ static PyObject *MessageQueue_enter(MessageQueue *self)
 {
     Py_INCREF(self);
     MessageQueue_start(self, NULL);
+
     return (PyObject *)self;
 };
 
@@ -210,16 +221,19 @@ PyMODINIT_FUNC
 PyInit_message_queue(void)
 {
     PyObject *m;
+
     if (PyType_Ready(&CustomType) < 0)
         return NULL;
 
     m = PyModule_Create(&queuemodule);
+
     if (m == NULL)
         return NULL;
 
     if (PyModule_AddObjectRef(m, "MessageQueue", (PyObject *)&CustomType) < 0)
     {
         Py_DECREF(m);
+
         return NULL;
     }
 
