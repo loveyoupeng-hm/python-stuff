@@ -35,9 +35,7 @@ MessageQueue_dealloc(MessageQueue *self)
     MessageQueue_exit(self, NULL);
     int result;
     thrd_join(self->consumer_thread, &result);
-    int result2;
-    thrd_join(self->producer_thread, &result2);
-
+    thrd_join(self->producer_thread, &result);
     if (self->queue)
         free(self->queue);
     Py_XDECREF(self->callback);
@@ -73,11 +71,10 @@ MessageQueue_init(MessageQueue *self, PyObject *args, PyObject *kwds)
 
         return -1;
 
-    // Py_XSETREF(self->callback, Py_NewRef(callback));
+    Py_XINCREF(callback);
     self->callback = callback;
     self->queue = one2onequeue_new(self->size, sizeof(int));
     Py_XINCREF(self->queue);
-    Py_XINCREF(self->callback);
     return 0;
 }
 
@@ -92,6 +89,7 @@ static int MessageQueue_consumer(void *self)
 
     MessageQueue *target = (MessageQueue *)self;
     PyObject *arglist;
+    int count = 0;
 
     atomic_load_explicit(&target->status, memory_order_acquire);
     while (target->status == Running)
@@ -105,14 +103,14 @@ static int MessageQueue_consumer(void *self)
                 return 0;
             }
         }
-        printf("callback value %d\n", *(int*)value);
-        arglist = Py_BuildValue("i", *(int *)value);
         PyGILState_STATE gstate = PyGILState_Ensure();
+        arglist = Py_BuildValue("i", *(int *)value);
         PyObject_CallOneArg(target->callback, arglist);
-        PyGILState_Release(gstate);
         Py_DECREF(arglist);
-        free(value);
+        PyGILState_Release(gstate);
         atomic_load_explicit(&target->status, memory_order_acquire);
+        if (count++ < 100)
+            printf("callback for value %d\n", *(int *)value);
     }
 
     return 0;
@@ -126,9 +124,7 @@ static int MessageQueue_generate(void *self)
     atomic_load_explicit(&target->status, memory_order_acquire);
     while (target->status == Running)
     {
-        int *data = (int *)malloc(sizeof(int));
-        *data = value;
-        while (!one2onequeue_offer(target->queue, data))
+        while (!one2onequeue_offer(target->queue, &value))
         {
             atomic_load_explicit(&target->status, memory_order_acquire);
             if (target->status != Running)
@@ -136,9 +132,6 @@ static int MessageQueue_generate(void *self)
                 return 0;
             }
         }
-
-        printf("publish value %d\n", *(int*)data);
-        free(data);
         value++;
         atomic_load_explicit(&target->status, memory_order_acquire);
     }

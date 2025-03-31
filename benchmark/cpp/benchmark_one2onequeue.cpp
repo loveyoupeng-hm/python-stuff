@@ -41,13 +41,16 @@ BENCHMARK_DEFINE_F(One2OneQueueFixture, One2OneQueue)(benchmark::State &state)
     {
         if (state.thread_index() == 0)
         {
+            value++;
             if (one2onequeue_offer(queue, &value))
                 offer++;
             total_offer++;
         }
         else
         {
-            if (NULL != one2onequeue_poll(queue))
+            void *result = one2onequeue_poll(queue);
+            benchmark::DoNotOptimize(result);
+            if (NULL != result)
                 poll++;
             total_poll++;
         }
@@ -67,6 +70,6 @@ BENCHMARK_DEFINE_F(One2OneQueueFixture, One2OneQueue)(benchmark::State &state)
     }
 }
 
-BENCHMARK_REGISTER_F(One2OneQueueFixture, One2OneQueue)->RangeMultiplier(2)->Range(2, 1 << 15)->Threads(2);
+BENCHMARK_REGISTER_F(One2OneQueueFixture, One2OneQueue)->RangeMultiplier(2)->Range(2, 1 << 20)->Threads(2);
 
 BENCHMARK_MAIN();

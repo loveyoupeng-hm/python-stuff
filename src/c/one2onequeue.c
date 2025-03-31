@@ -21,37 +21,40 @@ One2OneQueue *one2onequeue_new(int capacity, int slot_size)
 bool one2onequeue_offer(One2OneQueue *queue, void *data)
 {
     long limit = queue->cached_tail + queue->capacity;
-    if (queue->head >= limit)
+    long next = queue->head;
+    if (next >= limit)
     {
-        queue->cached_tail = atomic_load_explicit(&queue->tail, memory_order_acquire);
+        atomic_load_explicit(&queue->tail, memory_order_acquire);
+        queue->cached_tail = queue->tail;
         limit = queue->cached_tail + queue->capacity;
     }
 
-    if (queue->head >= limit)
+    if (next >= limit)
     {
         return false;
     }
-    void *loc = (char *)queue->data + queue->slot_size * (queue->head & queue->mask);
+    void *loc = (char *)queue->data + queue->slot_size * (next & queue->mask);
     memcpy(loc, data, queue->slot_size);
-    atomic_store_explicit(&(queue->head), queue->head + 1, memory_order_release);
+    atomic_store_explicit(&(queue->head), next + 1, memory_order_release);
     return true;
 }
 
 void *one2onequeue_poll(One2OneQueue *queue)
 {
-    long tail = queue->tail;
-    if (tail >= queue->cached_head)
+    long next = queue->tail;
+    if (next >= queue->cached_head)
     {
-        queue->cached_head = atomic_load_explicit(&queue->head, memory_order_acquire);
+        atomic_load_explicit(&queue->head, memory_order_acquire);
+        queue->cached_head = queue->head;
     }
-    if (tail >= queue->cached_head)
+    if (next >= queue->cached_head)
     {
         return NULL;
     }
     void *result = malloc(queue->slot_size);
-    void *loc = (char *)queue->data + queue->slot_size * (tail & queue->mask);
+    void *loc = (char *)queue->data + queue->slot_size * (next & queue->mask);
     memcpy(result, loc, queue->slot_size);
-    atomic_store_explicit(&queue->tail, tail + 1, memory_order_release);
+    atomic_store_explicit(&queue->tail, next + 1, memory_order_release);
     return result;
 }
 
