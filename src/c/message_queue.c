@@ -100,7 +100,6 @@ static int MessageQueue_consumer(void *self)
             atomic_load_explicit(&target->status, memory_order_acquire);
             if (target->status != Running)
             {
-                printf("stop running\n");
                 return 0;
             }
         }
@@ -114,7 +113,6 @@ static int MessageQueue_consumer(void *self)
         atomic_load_explicit(&target->status, memory_order_acquire);
     }
 
-    printf("finish running\n");
     return 0;
 };
 
