@@ -11,7 +11,7 @@ public:
     {
         if (state.thread_index() == 0)
         {
-            queue = one2onequeue_new(state.range(0));
+            queue = one2onequeue_new(state.range(0), sizeof(int));
         }
     }
 

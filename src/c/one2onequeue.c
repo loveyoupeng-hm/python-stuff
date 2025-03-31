@@ -4,14 +4,15 @@
 #include "one2onequeue.h"
 #include <string.h>
 
-One2OneQueue *one2onequeue_new(int capacity)
+One2OneQueue *one2onequeue_new(int capacity, int slot_size)
 {
     One2OneQueue *result = (One2OneQueue *)malloc(sizeof(One2OneQueue));
     result->capacity = capacity;
+    result->slot_size = slot_size;
     result->mask = capacity - 1;
     result->cached_head = 0;
     result->cached_tail = 0;
-    result->data = (void **)malloc(capacity * sizeof(void *));
+    result->data = (void *)malloc(capacity * slot_size);
     atomic_store_explicit(&(result->head), 0, memory_order_release);
     atomic_store_explicit(&(result->tail), 0, memory_order_release);
     return result;
@@ -30,7 +31,8 @@ bool one2onequeue_offer(One2OneQueue *queue, void *data)
     {
         return false;
     }
-    queue->data[queue->head & queue->mask] = data;
+    void *loc = (char *)queue->data + queue->slot_size * (queue->head & queue->mask);
+    memcpy(loc, data, queue->slot_size);
     atomic_store_explicit(&(queue->head), queue->head + 1, memory_order_release);
     return true;
 }
@@ -46,8 +48,14 @@ void *one2onequeue_poll(One2OneQueue *queue)
     {
         return NULL;
     }
-    void *result = queue->data[tail & queue->mask];
-    queue->data[tail & queue->mask] = NULL;
+    void *result = malloc(queue->slot_size);
+    void *loc = (char *)queue->data + queue->slot_size * (tail & queue->mask);
+    memcpy(result, loc, queue->slot_size);
     atomic_store_explicit(&queue->tail, tail + 1, memory_order_release);
     return result;
+}
+
+int one2onequeue_size(One2OneQueue *queue)
+{
+    return queue->head - queue->tail;
 }

@@ -30,7 +30,7 @@ namespace test_message_queue
     {
         int n1 = -1;
         int size = 128;
-        One2OneQueue *queue = one2onequeue_new(size);
+        One2OneQueue *queue = one2onequeue_new(size, sizeof(int));
         EXPECT_EQ(size, queue->capacity);
         for (int i = 0; i < size; ++i)
         {

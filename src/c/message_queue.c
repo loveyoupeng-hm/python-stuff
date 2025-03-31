@@ -4,11 +4,13 @@
 #include <stdio.h>
 #include <threads.h>
 
+#include "one2onequeue.h"
+
 enum Status
 {
     New = 0,
-    Running,
-    Stopped
+    Running = 1,
+    Stopped = 2
 };
 
 typedef struct
@@ -16,29 +18,31 @@ typedef struct
     PyObject_HEAD;
     int size;
     PyObject *callback; /* last name */
-    volatile atomic_long head;
     volatile atomic_int status;
-    int *queue;
-    long cached_head;
-    volatile atomic_long tail;
-    long cached_tail;
+    One2OneQueue *queue;
     thrd_t consumer_thread;
     thrd_t producer_thread;
 } MessageQueue;
 
+static PyObject *MessageQueue_exit(MessageQueue *self, PyObject *args)
+{
+    atomic_store_explicit(&self->status, Stopped, memory_order_release);
+    Py_RETURN_FALSE;
+};
 static void
 MessageQueue_dealloc(MessageQueue *self)
 {
-    Py_XDECREF(self->callback);
-    Py_XDECREF(self->queue);
-    Py_TYPE(self)->tp_free((PyObject *)self);
-    self->status = Stopped;
+    MessageQueue_exit(self, NULL);
     int result;
-    thrd_join(self->producer_thread, &result);
-    thrd_detach(self->consumer_thread);
+    thrd_join(self->consumer_thread, &result);
+    int result2;
+    thrd_join(self->producer_thread, &result2);
 
     if (self->queue)
         free(self->queue);
+    Py_XDECREF(self->callback);
+    Py_XDECREF(self->queue);
+    Py_TYPE(self)->tp_free((PyObject *)self);
 }
 
 static PyObject *
@@ -49,13 +53,9 @@ MessageQueue_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 
     if (self != NULL)
     {
-        self->cached_head = 0;
-        self->cached_tail = 0;
-        self->head = 0;
-        self->tail = 0;
         self->queue = NULL;
         self->callback = NULL;
-        self->status = New;
+        atomic_store_explicit(&self->status, New, memory_order_relaxed);
     }
 
     return (PyObject *)self;
@@ -73,12 +73,11 @@ MessageQueue_init(MessageQueue *self, PyObject *args, PyObject *kwds)
 
         return -1;
 
-    if (callback)
-    {
-        Py_XSETREF(self->callback, Py_NewRef(callback));
-    }
-    self->queue = (int *)malloc(sizeof(int) * self->size);
-
+    // Py_XSETREF(self->callback, Py_NewRef(callback));
+    self->callback = callback;
+    self->queue = one2onequeue_new(self->size, sizeof(int));
+    Py_XINCREF(self->queue);
+    Py_XINCREF(self->callback);
     return 0;
 }
 
@@ -94,27 +93,26 @@ static int MessageQueue_consumer(void *self)
     MessageQueue *target = (MessageQueue *)self;
     PyObject *arglist;
 
+    atomic_load_explicit(&target->status, memory_order_acquire);
     while (target->status == Running)
     {
-        long next = target->tail + 1;
-
-        if (next >= target->cached_head)
+        void *value = NULL;
+        while (NULL == (value = one2onequeue_poll(target->queue)))
         {
-            do
+            atomic_load_explicit(&target->status, memory_order_acquire);
+            if (target->status != Running)
             {
-                if (target->status != Running)
-                {
-                    return 0;
-                }
-                target->cached_head = target->head;
-            } while (next >= target->cached_head);
+                return 0;
+            }
         }
-        arglist = Py_BuildValue("i", target->queue[next % target->size]);
-        target->tail = next;
-        PyGILState_STATE gstate;
-        gstate = PyGILState_Ensure();
+        printf("callback value %d\n", *(int*)value);
+        arglist = Py_BuildValue("i", *(int *)value);
+        PyGILState_STATE gstate = PyGILState_Ensure();
         PyObject_CallOneArg(target->callback, arglist);
         PyGILState_Release(gstate);
+        Py_DECREF(arglist);
+        free(value);
+        atomic_load_explicit(&target->status, memory_order_acquire);
     }
 
     return 0;
@@ -125,24 +123,24 @@ static int MessageQueue_generate(void *self)
     MessageQueue *target = (MessageQueue *)self;
     int value = 0;
 
+    atomic_load_explicit(&target->status, memory_order_acquire);
     while (target->status == Running)
     {
-        long next = target->head + 1;
-
-        if (next - target->cached_tail >= target->size - 1)
+        int *data = (int *)malloc(sizeof(int));
+        *data = value;
+        while (!one2onequeue_offer(target->queue, data))
         {
-            do
+            atomic_load_explicit(&target->status, memory_order_acquire);
+            if (target->status != Running)
             {
-                if (target->status != Running)
-                {
-                    return 0;
-                }
-                target->cached_tail = target->tail;
-            } while (next - target->cached_tail >= target->size - 1);
+                return 0;
+            }
         }
-        target->queue[next % target->size] = value;
+
+        printf("publish value %d\n", *(int*)data);
+        free(data);
         value++;
-        target->head = next;
+        atomic_load_explicit(&target->status, memory_order_acquire);
     }
 
     return 0;
@@ -151,7 +149,7 @@ static int MessageQueue_generate(void *self)
 static PyObject *
 MessageQueue_start(MessageQueue *self, PyObject *Py_UNUSED(ignore))
 {
-    self->status = Running;
+    atomic_store_explicit(&self->status, Running, memory_order_release);
     thrd_create(&self->consumer_thread, MessageQueue_consumer, self);
     thrd_create(&self->producer_thread, MessageQueue_generate, self);
     Py_INCREF(Py_None);
@@ -163,14 +161,7 @@ static PyObject *MessageQueue_enter(MessageQueue *self)
 {
     Py_INCREF(self);
     MessageQueue_start(self, NULL);
-
     return (PyObject *)self;
-};
-
-static PyObject *MessageQueue_exit(MessageQueue *self, PyObject *args)
-{
-    self->status = Stopped;
-    Py_RETURN_FALSE;
 };
 
 static PyMethodDef MessageQueue_methods[] = {
@@ -185,7 +176,7 @@ static PyObject *
 MessageQueue_repr(MessageQueue *self)
 {
     return PyUnicode_FromFormat("MessageQueue(capacity=%d, size=%d)",
-                                self->size, self->head - self->tail);
+                                self->size, one2onequeue_size(self->queue));
 }
 
 static PyObject *
