@@ -13,6 +13,7 @@ One2OneQueue *one2onequeue_new(int capacity, int slot_size)
     result->cached_head = 0;
     result->cached_tail = 0;
     result->data = (void *)malloc(capacity * slot_size);
+    memset(result->data, 0, capacity * slot_size);
     atomic_store_explicit(&(result->head), 0, memory_order_release);
     atomic_store_explicit(&(result->tail), 0, memory_order_release);
     return result;
@@ -20,45 +21,48 @@ One2OneQueue *one2onequeue_new(int capacity, int slot_size)
 
 bool one2onequeue_offer(One2OneQueue *queue, void *data)
 {
-    long limit = queue->cached_tail + queue->capacity;
-    long next = queue->head;
-    if (next >= limit)
+    long currentHead = queue->cached_head;
+    const int capacity = queue->capacity ;
+    long limit = currentHead + capacity;
+    const long currentTail = queue->tail;
+
+    if (currentTail >= limit)
     {
-        atomic_load_explicit(&queue->tail, memory_order_acquire);
-        queue->cached_tail = queue->tail;
-        limit = queue->cached_tail + queue->capacity;
+        atomic_load_explicit(&queue->head, memory_order_acquire);
+        currentHead = queue->head;
+        limit = currentHead + capacity;
+        if (currentTail >= limit)
+            return false;
+        queue->cached_head = currentHead;
     }
 
-    if (next >= limit)
-    {
-        return false;
-    }
-    void *loc = (char *)queue->data + queue->slot_size * (next & queue->mask);
+    void *loc = (char *)queue->data + queue->slot_size * (currentTail & queue->mask);
     memcpy(loc, data, queue->slot_size);
-    atomic_store_explicit(&(queue->head), next + 1, memory_order_release);
+    atomic_store_explicit(&(queue->tail), currentTail + 1, memory_order_release);
     return true;
 }
 
 void *one2onequeue_poll(One2OneQueue *queue)
 {
-    long next = queue->tail;
-    if (next >= queue->cached_head)
+    const long currentHead = queue->head;
+    long currentTail = queue->cached_tail;
+    if (currentHead >= currentTail)
     {
-        atomic_load_explicit(&queue->head, memory_order_acquire);
-        queue->cached_head = queue->head;
-    }
-    if (next >= queue->cached_head)
-    {
-        return NULL;
+        atomic_load_explicit(&queue->tail, memory_order_acquire);
+        currentTail = queue->tail;
+        if (currentHead >= currentTail)
+            return NULL;
+        queue->cached_tail = currentTail;
     }
     void *result = malloc(queue->slot_size);
-    void *loc = (char *)queue->data + queue->slot_size * (next & queue->mask);
+    void *loc = (char *)queue->data + queue->slot_size * (currentHead & queue->mask);
     memcpy(result, loc, queue->slot_size);
-    atomic_store_explicit(&queue->tail, next + 1, memory_order_release);
+    memset(loc, 0, queue->slot_size);
+    atomic_store_explicit(&queue->head, currentHead + 1, memory_order_release);
     return result;
 }
 
 int one2onequeue_size(One2OneQueue *queue)
 {
-    return queue->head - queue->tail;
+    return queue->tail - queue->head;
 }

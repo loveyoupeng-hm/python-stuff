@@ -43,24 +43,26 @@ namespace test_message_queue
     TEST(Library, ThreadCase)
     {
         One2OneQueue *queue = one2onequeue_new(16, sizeof(int));
+        int size = 10000;
         for (int x = 0; x < 5; x++)
         {
-            auto producer = std::thread([&queue, x]()
+            int count = 0;
+            auto producer = std::thread([&queue, x, size]()
                                         {
-            for (int i = 0;i < 10000;i++){
+            for (int i = 0;i < size;i++){
                while(!one2onequeue_offer(queue, new int{i+ x}));
             } });
-            auto consumer = std::thread([&queue, x]()
+            auto consumer = std::thread([&queue, x, size, &count]()
                                         {
-            for (int i = 0;i < 10000;i++){
-                void * value = NULL;
-                while(NULL == (value = one2onequeue_poll(queue))){
-                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
-                }
-                EXPECT_EQ(i+x, *(int*)value);
+            for (int i = 0;i < size;i++){
+                int* value = NULL;
+                while(NULL == (value = (int*)one2onequeue_poll(queue)));
+                ASSERT_EQ(i+x, *value);
+                count++;
             } });
             producer.join();
             consumer.join();
+            ASSERT_EQ(size, count);
         }
     }
 }

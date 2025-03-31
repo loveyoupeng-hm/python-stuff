@@ -65,7 +65,7 @@ MessageQueue_init(MessageQueue *self, PyObject *args, PyObject *kwds)
     static char *kwlist[] = {"callback", "size", NULL};
     PyObject *callback = NULL;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|Oi", kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "Oi", kwlist,
                                      &callback,
                                      &self->size))
 
@@ -74,7 +74,6 @@ MessageQueue_init(MessageQueue *self, PyObject *args, PyObject *kwds)
     Py_XINCREF(callback);
     self->callback = callback;
     self->queue = one2onequeue_new(self->size, sizeof(int));
-    Py_XINCREF(self->queue);
     return 0;
 }
 
@@ -88,29 +87,32 @@ static int MessageQueue_consumer(void *self)
 {
 
     MessageQueue *target = (MessageQueue *)self;
-    PyObject *arglist;
-    int count = 0;
+    int value = 0;
 
     atomic_load_explicit(&target->status, memory_order_acquire);
+    void *result = NULL;
+    int count = 0;
     while (target->status == Running)
     {
-        void *value = NULL;
-        while (NULL == (value = one2onequeue_poll(target->queue)))
+        result = NULL;
+        value = -1;
+        while (NULL == (result = one2onequeue_poll(target->queue)))
         {
+            thrd_yield();
             atomic_load_explicit(&target->status, memory_order_acquire);
             if (target->status != Running)
             {
                 return 0;
             }
-        }
+                }
+        value = *((int *)result);
+        free(result);
         PyGILState_STATE gstate = PyGILState_Ensure();
-        arglist = Py_BuildValue("i", *(int *)value);
+        PyObject *arglist = Py_BuildValue("i", value);
         PyObject_CallOneArg(target->callback, arglist);
         Py_DECREF(arglist);
         PyGILState_Release(gstate);
         atomic_load_explicit(&target->status, memory_order_acquire);
-        if (count++ < 100)
-            printf("callback for value %d\n", *(int *)value);
     }
 
     return 0;
@@ -122,10 +124,13 @@ static int MessageQueue_generate(void *self)
     int value = 0;
 
     atomic_load_explicit(&target->status, memory_order_acquire);
+    int *data = malloc(sizeof(int));
     while (target->status == Running)
     {
-        while (!one2onequeue_offer(target->queue, &value))
+        *data = value;
+        while (!one2onequeue_offer(target->queue, data))
         {
+            thrd_yield();
             atomic_load_explicit(&target->status, memory_order_acquire);
             if (target->status != Running)
             {
@@ -135,7 +140,7 @@ static int MessageQueue_generate(void *self)
         value++;
         atomic_load_explicit(&target->status, memory_order_acquire);
     }
-
+    free(data);
     return 0;
 }
 
