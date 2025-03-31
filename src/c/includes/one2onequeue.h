@@ -20,12 +20,13 @@ extern "C"
         volatile atomic_long tail;
         long cached_head;
         long long padding3[128];
-        void *data;
+        void **data;
     } One2OneQueue;
 
-    One2OneQueue *one2onequeue_new(int capacity, int size);
+    One2OneQueue *one2onequeue_new(int capacity);
 
-    bool try_offer(One2OneQueue *queue, void *data);
+    bool one2onequeue_offer(One2OneQueue *queue, void *data);
+    void *one2onequeue_poll(One2OneQueue *queue);
 
 #ifdef __cplusplus
 }

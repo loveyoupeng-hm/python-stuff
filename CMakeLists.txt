@@ -25,7 +25,6 @@ find_package (Python3 REQUIRED COMPONENTS Development.Embed)
 find_package(Threads REQUIRED)
 enable_testing()
 
-
 CPMAddPackage(
     NAME GOOGLE_TEST
     GITHUB_REPOSITORY google/googletest
@@ -37,8 +36,19 @@ CPMAddPackage(
 
 )
 
+CPMAddPackage(
+    NAME benchmark
+    GITHUB_REPOSITORY google/benchmark
+    VERSION 1.9.2
+    SOURCE_DIR ${LIB_DIR}/benchmark
+    OPTIONS "BENCHMARK_ENABLE_TESTING Off"
+)
+if(benchmark_ADDED)
+  set_target_properties(benchmark PROPERTIES CXX_STANDARD 17)
+endif()
 
 include_directories("src/c/includes")
 
 add_subdirectory(src/c)
 add_subdirectory(tests/c/)
+add_subdirectory(benchmark/cpp/)
