@@ -32,14 +32,13 @@ static PyObject *MessageQueue_exit(MessageQueue *self, PyObject *args)
 static void
 MessageQueue_dealloc(MessageQueue *self)
 {
-    MessageQueue_exit(self, NULL);
+    atomic_store_explicit(&self->status, Stopped, memory_order_seq_cst);
     int result;
-    thrd_join(self->consumer_thread, &result);
+    thrd_detach(self->consumer_thread);
     thrd_join(self->producer_thread, &result);
     if (self->queue)
         free(self->queue);
     Py_XDECREF(self->callback);
-    Py_XDECREF(self->queue);
     Py_TYPE(self)->tp_free((PyObject *)self);
 }
 
@@ -98,13 +97,13 @@ static int MessageQueue_consumer(void *self)
         value = -1;
         while (NULL == (result = one2onequeue_poll(target->queue)))
         {
-            thrd_yield();
             atomic_load_explicit(&target->status, memory_order_acquire);
             if (target->status != Running)
             {
+                printf("stop running\n");
                 return 0;
             }
-                }
+        }
         value = *((int *)result);
         free(result);
         PyGILState_STATE gstate = PyGILState_Ensure();
@@ -115,6 +114,7 @@ static int MessageQueue_consumer(void *self)
         atomic_load_explicit(&target->status, memory_order_acquire);
     }
 
+    printf("finish running\n");
     return 0;
 };
 
@@ -130,7 +130,6 @@ static int MessageQueue_generate(void *self)
         *data = value;
         while (!one2onequeue_offer(target->queue, data))
         {
-            thrd_yield();
             atomic_load_explicit(&target->status, memory_order_acquire);
             if (target->status != Running)
             {
