@@ -3,7 +3,7 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "simple-lib"
+name = "pyextension"
 version = "0.1"
 
 

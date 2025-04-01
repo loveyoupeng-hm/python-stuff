@@ -23,5 +23,9 @@ setup(
     name="spam",
     version="0.0.1",
     cmdclass={"build_ext": CmakeBuildExt},
-    ext_modules=[Extension("spam", sources=[]), Extension("custom", sources=[])],
+    ext_modules=[
+        Extension("spam", sources=[]),
+        Extension("custom", sources=[]),
+        Extension("message_queue", sources=[]),
+    ],
 )
