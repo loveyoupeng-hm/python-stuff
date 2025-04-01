@@ -6,6 +6,7 @@
 
 extern "C"
 {
+#include <stdatomic.h>
     typedef struct Data_t
     {
         char *name;
@@ -15,6 +16,14 @@ extern "C"
 
 namespace test_message_queue
 {
+    TEST(Utils, atimic)
+    {
+        volatile atomic_int value = 10;
+        ASSERT_EQ(10, atomic_load_explicit(&value, memory_order_acquire));
+        atomic_store_explicit(&value, 200, memory_order_release);
+        ASSERT_EQ(200, atomic_load_explicit(&value, memory_order_acquire));
+    }
+
     TEST(Libraries, One2OneQueue)
     {
         int n1 = -1;

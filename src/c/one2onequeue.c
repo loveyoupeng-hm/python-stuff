@@ -22,14 +22,13 @@ One2OneQueue *one2onequeue_new(int capacity, int slot_size)
 bool one2onequeue_offer(One2OneQueue *queue, void *data)
 {
     long currentHead = queue->cached_head;
-    const int capacity = queue->capacity ;
+    const int capacity = queue->capacity;
     long limit = currentHead + capacity;
     const long currentTail = queue->tail;
 
     if (currentTail >= limit)
     {
-        atomic_load_explicit(&queue->head, memory_order_acquire);
-        currentHead = queue->head;
+        currentHead = atomic_load_explicit(&queue->head, memory_order_acquire);
         limit = currentHead + capacity;
         if (currentTail >= limit)
             return false;
@@ -48,8 +47,7 @@ void *one2onequeue_poll(One2OneQueue *queue)
     long currentTail = queue->cached_tail;
     if (currentHead >= currentTail)
     {
-        atomic_load_explicit(&queue->tail, memory_order_acquire);
-        currentTail = queue->tail;
+        currentTail = atomic_load_explicit(&queue->tail, memory_order_acquire);
         if (currentHead >= currentTail)
             return NULL;
         queue->cached_tail = currentTail;
