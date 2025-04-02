@@ -12,6 +12,14 @@ extern "C"
         char *name;
         int age;
     } Data;
+
+    int global_value = 0;
+
+    void match_128(void *, void *data)
+    {
+        EXPECT_EQ(global_value, *(int *)data);
+        global_value++;
+    }
 }
 
 namespace test_message_queue
@@ -45,8 +53,18 @@ namespace test_message_queue
             }
             EXPECT_EQ(NULL, one2onequeue_poll(queue));
         }
+        for (int x = 0; x < 5; x++)
+        {
+            global_value = 0;
+            for (int i = 0; i < size / 3; ++i)
+            {
+                void *value = malloc(sizeof(int));
+                *(int *)value = i;
+                EXPECT_TRUE(one2onequeue_offer(queue, value));
+            }
+            EXPECT_EQ(size / 3, one2onequeue_drain(queue, NULL, match_128));
+        }
         free(queue);
-        EXPECT_EQ(1, 3 - 2);
     }
 
     TEST(Library, ThreadCase)

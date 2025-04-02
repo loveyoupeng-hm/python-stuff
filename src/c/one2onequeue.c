@@ -60,6 +60,30 @@ void *one2onequeue_poll(One2OneQueue *queue)
     return result;
 }
 
+int one2onequeue_drain(One2OneQueue *queue, void *context, void (*func)(void *, void *))
+{
+    const long currentHead = queue->head;
+    long currentTail = queue->cached_tail;
+    if (currentHead >= currentTail)
+    {
+        currentTail = atomic_load_explicit(&queue->tail, memory_order_acquire);
+        if (currentHead >= currentTail)
+            return 0;
+        queue->cached_tail = currentTail;
+    }
+    void *result = malloc(queue->slot_size);
+    int size = currentTail - currentHead;
+    for (int i = 0; i < size; i++)
+    {
+        void *loc = (char *)queue->data + queue->slot_size * ((currentHead + i) & queue->mask);
+        memcpy(result, loc, queue->slot_size);
+        memset(loc, 0, queue->slot_size);
+        func(context, result);
+        atomic_store_explicit(&queue->head, currentHead + 1 + i, memory_order_release);
+    }
+    return size;
+}
+
 int one2onequeue_size(One2OneQueue *queue)
 {
     return queue->tail - queue->head;
