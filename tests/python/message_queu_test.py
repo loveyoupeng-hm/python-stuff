@@ -7,14 +7,14 @@ from message_queue import MessageQueue  # type: ignore
 
 @pytest.mark.timeout(15)
 def test_message_queue():
-    result = Queue[int](1_000_000)
+    result = Queue[int](1_500_000)
 
     def process(value: int) -> None:
         result.put(value)
 
     queue = MessageQueue(callback=process, size=8)
     queue.start()
-    while result.qsize() < 900000:
+    while result.qsize() < 1_000_000:
         sleep(0.001)
     del queue
 

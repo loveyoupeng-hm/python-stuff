@@ -81,34 +81,25 @@ static PyMemberDef MessageQueue_members[] = {
      "size"},
     {NULL} /* Sentinel */
 };
+static void process(void *context, void *data)
+{
+    MessageQueue *target = (MessageQueue *)context;
+    int value = *(int *)data;
+    PyObject *arglist = Py_BuildValue("i", value);
+    PyObject_CallOneArg(target->callback, arglist);
+    Py_DECREF(arglist);
+}
 
 static int MessageQueue_consumer(void *self)
 {
 
     MessageQueue *target = (MessageQueue *)self;
-    int value = 0;
 
     atomic_load_explicit(&target->status, memory_order_acquire);
-    void *result = NULL;
-    int count = 0;
     while (target->status == Running)
     {
-        result = NULL;
-        value = -1;
-        while (NULL == (result = one2onequeue_poll(target->queue)))
-        {
-            atomic_load_explicit(&target->status, memory_order_acquire);
-            if (target->status != Running)
-            {
-                return 0;
-            }
-        }
-        value = *((int *)result);
-        free(result);
         PyGILState_STATE gstate = PyGILState_Ensure();
-        PyObject *arglist = Py_BuildValue("i", value);
-        PyObject_CallOneArg(target->callback, arglist);
-        Py_DECREF(arglist);
+        one2onequeue_drain(target->queue, target, &process);
         PyGILState_Release(gstate);
         atomic_load_explicit(&target->status, memory_order_acquire);
     }
