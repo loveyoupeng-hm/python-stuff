@@ -14,7 +14,10 @@ endfunction()
 
 add_library(one2onequeue STATIC one2onequeue.c)
 target_compile_definitions(one2onequeue PRIVATE _ATOMIC_OPERATORS_DEFINED)
+add_library(coalescingringbuffer STATIC coalescingringbuffer.c)
+target_compile_definitions(coalescingringbuffer PRIVATE _ATOMIC_OPERATORS_DEFINED)
 
 add_module(spam "")
 add_module(custom "")
 add_module(message_queue one2onequeue)
+

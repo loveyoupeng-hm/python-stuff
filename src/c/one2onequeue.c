@@ -4,7 +4,7 @@
 #include "one2onequeue.h"
 #include <string.h>
 
-One2OneQueue *one2onequeue_new(int capacity, int slot_size)
+One2OneQueue *one2onequeue_new(unsigned int capacity, unsigned int slot_size)
 {
     One2OneQueue *result = (One2OneQueue *)malloc(sizeof(One2OneQueue));
     result->capacity = capacity;
@@ -21,10 +21,10 @@ One2OneQueue *one2onequeue_new(int capacity, int slot_size)
 
 bool one2onequeue_offer(One2OneQueue *queue, void *data)
 {
-    long currentHead = queue->cached_head;
-    const int capacity = queue->capacity;
-    long limit = currentHead + capacity;
-    const long currentTail = queue->tail;
+    unsigned long long currentHead = queue->cached_head;
+    const unsigned int capacity = queue->capacity;
+    unsigned long long limit = currentHead + capacity;
+    const unsigned long long currentTail = queue->tail;
 
     if (currentTail >= limit)
     {
@@ -43,8 +43,8 @@ bool one2onequeue_offer(One2OneQueue *queue, void *data)
 
 void *one2onequeue_poll(One2OneQueue *queue)
 {
-    const long currentHead = queue->head;
-    long currentTail = queue->cached_tail;
+    const unsigned long long currentHead = queue->head;
+    unsigned long long currentTail = queue->cached_tail;
     if (currentHead >= currentTail)
     {
         currentTail = atomic_load_explicit(&queue->tail, memory_order_acquire);
@@ -60,10 +60,10 @@ void *one2onequeue_poll(One2OneQueue *queue)
     return result;
 }
 
-int one2onequeue_drain(One2OneQueue *queue, void *context, void (*func)(void *, void *))
+unsigned int one2onequeue_drain_to(One2OneQueue *queue, unsigned int limit, void *context, void (*func)(void *, void *))
 {
-    const long currentHead = queue->head;
-    long currentTail = queue->cached_tail;
+    const unsigned long long currentHead = queue->head;
+    unsigned long long currentTail = queue->cached_tail;
     if (currentHead >= currentTail)
     {
         currentTail = atomic_load_explicit(&queue->tail, memory_order_acquire);
@@ -72,7 +72,7 @@ int one2onequeue_drain(One2OneQueue *queue, void *context, void (*func)(void *, 
         queue->cached_tail = currentTail;
     }
     void *result = malloc(queue->slot_size);
-    int size = currentTail - currentHead;
+    unsigned int size = min(currentTail - currentHead, limit);
     for (int i = 0; i < size; i++)
     {
         void *loc = (char *)queue->data + queue->slot_size * ((currentHead + i) & queue->mask);
@@ -84,7 +84,7 @@ int one2onequeue_drain(One2OneQueue *queue, void *context, void (*func)(void *, 
     return size;
 }
 
-int one2onequeue_size(One2OneQueue *queue)
+unsigned int one2onequeue_size(One2OneQueue *queue)
 {
     return queue->tail - queue->head;
 }

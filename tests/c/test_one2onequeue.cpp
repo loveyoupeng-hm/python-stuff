@@ -30,12 +30,20 @@ namespace test_message_queue
         ASSERT_EQ(10, atomic_load_explicit(&value, memory_order_acquire));
         atomic_store_explicit(&value, 200, memory_order_release);
         ASSERT_EQ(200, atomic_load_explicit(&value, memory_order_acquire));
+        int x[10];
+        for (int i = 0; i < 10; ++i)
+            x[i] = i + 1;
+        void **y = (void **)malloc(sizeof(void *) * 10);
+        for (int i = 0; i < 10; ++i)
+            y[i] = &x[i];
+        for (int i = 0; i < 10; ++i)
+            ASSERT_EQ(i + 1, *(int *)(y[i]));
     }
 
     TEST(Libraries, One2OneQueue)
     {
         int n1 = -1;
-        int size = 128;
+        unsigned int size = 128;
         One2OneQueue *queue = one2onequeue_new(size, sizeof(int));
         EXPECT_EQ(size, queue->capacity);
         for (int x = 0; x < 10; x++)
@@ -64,6 +72,18 @@ namespace test_message_queue
             }
             EXPECT_EQ(size / 3, one2onequeue_drain(queue, NULL, match_128));
         }
+        global_value = 0;
+        for (int i = 0; i < size; ++i)
+        {
+            void *value = malloc(sizeof(int));
+            *(int *)value = i;
+            EXPECT_TRUE(one2onequeue_offer(queue, value));
+        }
+        EXPECT_FALSE(one2onequeue_offer(queue, (void *)&n1));
+        EXPECT_EQ(size / 2, one2onequeue_drain_to(queue, size / 2, NULL, match_128));
+        EXPECT_EQ(size / 2, one2onequeue_size(queue));
+        EXPECT_EQ(size / 2, one2onequeue_drain_to(queue, size / 2, NULL, match_128));
+
         free(queue);
     }
 
@@ -91,5 +111,6 @@ namespace test_message_queue
             consumer.join();
             ASSERT_EQ(size, count);
         }
+        ASSERT_EQ(2, ATOMIC_LLONG_LOCK_FREE);
     }
 }

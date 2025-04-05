@@ -48,6 +48,17 @@
             "cwd": "${fileDirname}",
             "environment": [],
             "console": "externalTerminal"
+        },
+        {
+            "name": "coalesingringbuffer Launch",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/tests/c/test_coalescingringbuffer.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${fileDirname}",
+            "environment": [],
+            "console": "externalTerminal"
         }
     ]
 }
