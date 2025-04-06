@@ -61,7 +61,7 @@ inline static void coalescingringbuffer_cleanup(CoalescingRingBuffer *buffer)
         unsigned int index = mask(buffer, ++buffer->last_cleaned);
         free(buffer->keys[index]);
         buffer->keys[index] = NULL;
-        void *old = atomic_exchange_explicit(&buffer->values[index], NULL, memory_order_release);
+        void *old = (void *)atomic_exchange_explicit(&buffer->values[index], NULL, memory_order_release);
         if (old != NULL)
             free(old);
     }
@@ -122,7 +122,7 @@ unsigned int coalescingringbuffer_poll(CoalescingRingBuffer *buffer, unsigned in
     {
         unsigned int index = mask(buffer, read_index);
         func(context, (void *)atomic_load_explicit(&buffer->values[index], memory_order_acquire));
-        void *old = atomic_exchange_explicit(&buffer->values[index], NULL, memory_order_release);
+        void *old = (void *)atomic_exchange_explicit(&buffer->values[index], NULL, memory_order_release);
         if (old == NULL)
             free(old);
     }

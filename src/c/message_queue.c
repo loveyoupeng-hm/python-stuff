@@ -24,18 +24,23 @@ typedef struct
     thrd_t producer_thread;
 } MessageQueue;
 
+static PyObject *MessageQueue_stop(MessageQueue *self)
+{
+    atomic_exchange_explicit(&self->status, Stopped, memory_order_seq_cst);
+    int result;
+    thrd_join(self->consumer_thread, &result);
+    thrd_join(self->producer_thread, &result);
+    Py_RETURN_FALSE;
+}
 static PyObject *MessageQueue_exit(MessageQueue *self, PyObject *args)
 {
-    atomic_store_explicit(&self->status, Stopped, memory_order_release);
-    Py_RETURN_FALSE;
+    return MessageQueue_stop(self);
 };
+
 static void
 MessageQueue_dealloc(MessageQueue *self)
 {
-    atomic_store_explicit(&self->status, Stopped, memory_order_seq_cst);
-    int result;
-    thrd_detach(self->consumer_thread);
-    thrd_join(self->producer_thread, &result);
+    MessageQueue_stop(self);
     if (self->queue)
         free(self->queue);
     Py_XDECREF(self->callback);
@@ -95,15 +100,12 @@ static int MessageQueue_consumer(void *self)
 
     MessageQueue *target = (MessageQueue *)self;
 
-    atomic_load_explicit(&target->status, memory_order_acquire);
-    while (target->status == Running)
+    while (atomic_load_explicit(&target->status, memory_order_acquire) == Running)
     {
         PyGILState_STATE gstate = PyGILState_Ensure();
         one2onequeue_drain(target->queue, target, &process);
         PyGILState_Release(gstate);
-        atomic_load_explicit(&target->status, memory_order_acquire);
     }
-
     return 0;
 };
 
@@ -153,6 +155,7 @@ static PyObject *MessageQueue_enter(MessageQueue *self)
 static PyMethodDef MessageQueue_methods[] = {
     {"start", (PyCFunction)MessageQueue_start, METH_NOARGS,
      "Start Processing"},
+    {"stop", (PyCFunction)MessageQueue_stop, METH_NOARGS, "Stop Processing"},
     {"__enter__", (PyCFunction)MessageQueue_enter, METH_NOARGS, "enter scope"},
     {"__exit__", (PyCFunction)MessageQueue_enter, METH_VARARGS, "enter scope"},
     {NULL} /* Sentinel */

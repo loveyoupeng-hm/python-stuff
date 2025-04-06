@@ -83,6 +83,7 @@ namespace test_message_queue
         EXPECT_EQ(size / 2, one2onequeue_drain_to(queue, size / 2, NULL, match_128));
         EXPECT_EQ(size / 2, one2onequeue_size(queue));
         EXPECT_EQ(size / 2, one2onequeue_drain_to(queue, size / 2, NULL, match_128));
+        EXPECT_EQ(0, one2onequeue_drain_to(queue, size, NULL, match_128));
 
         free(queue);
     }

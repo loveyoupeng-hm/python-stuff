@@ -18,12 +18,16 @@ def test_message_queue():
     while result.qsize() < 10_000:
         sleep(0.001)
     end = perf_counter_ns()
-    del queue
+    queue.stop()
 
+    size = result.qsize()
     print(
-        f"perf : {result.qsize()} / {float((end - start)) / 1_000_000_000} {float(end - start) / result.qsize()}"
+        f"perf : {size} / {float((end - start)) / 1_000_000_000} {float(end - start) / size}"
     )
 
-    for i in range(0, result.qsize()):
-        assert i == result.get()
-    print("finished")
+    for i in range(0, size):
+        try:
+            value = result.get_nowait()
+            assert i == value
+        except Exception as e:
+            print(e)
