@@ -42,10 +42,6 @@ namespace test_message_queue
 {
     TEST(Utils, atimic)
     {
-        void *a[2];
-        a[0] = NULL;
-        a[1] = NULL;
-        auto aa = (char[2][sizeof((void *[]){a}) / sizeof(void *)]){0};
         ASSERT_EQ(1, process(NULL));
         ASSERT_EQ(2, process(NULL, NULL));
         volatile atomic_int value = 10;
