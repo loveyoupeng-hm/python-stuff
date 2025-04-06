@@ -20,12 +20,34 @@ extern "C"
         EXPECT_EQ(global_value, *(int *)data);
         global_value++;
     }
+
+    int process_one(void *)
+    {
+        return 1;
+    }
+
+    int process_two(void *, void *)
+    {
+        return 2;
+    }
+
+#define process(...)                                                    \
+    _Generic(                                                           \
+        (char[2][sizeof((void *[]){__VA_ARGS__}) / sizeof(void *)]){0}, \
+        char (*)[1]: process_one,                                       \
+        char (*)[2]: process_two)(__VA_ARGS__)
 }
 
 namespace test_message_queue
 {
     TEST(Utils, atimic)
     {
+        void *a[2];
+        a[0] = NULL;
+        a[1] = NULL;
+        auto aa = (char[2][sizeof((void *[]){a}) / sizeof(void *)]){0};
+        ASSERT_EQ(1, process(NULL));
+        ASSERT_EQ(2, process(NULL, NULL));
         volatile atomic_int value = 10;
         ASSERT_EQ(10, atomic_load_explicit(&value, memory_order_acquire));
         atomic_store_explicit(&value, 200, memory_order_release);
